@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="/vue-cursor/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vue Cursor</title>
+    <script type="text/javascript">
+      // GitHub Pages 路由处理
+      (function () {
+        const redirect = sessionStorage.redirect;
+        delete sessionStorage.redirect;
+        if (redirect && redirect !== location.href) {
+          history.replaceState(null, null, redirect);
+        }
+      })();
+    </script>
+    <script type="module" crossorigin src="/vue-cursor/assets/index-5O54XuTD.js"></script>
+    <link rel="modulepreload" crossorigin href="/vue-cursor/assets/vendor-DtMBdrkR.js">
+    <link rel="stylesheet" crossorigin href="/vue-cursor/assets/vendor-BX-B-5mM.css">
+    <link rel="stylesheet" crossorigin href="/vue-cursor/assets/index-BR8fL6b-.css">
+  </head>
+  <body>
+    <div id="app"></div>
+  </body>
+</html>
