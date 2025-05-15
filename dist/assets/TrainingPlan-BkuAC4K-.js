@@ -1,0 +1,1 @@
+import{_ as e}from"./index-C040dBNx.js";import{g as o,h as a,o as t}from"./vendor-DtMBdrkR.js";const r={},s={class:"training-plan"};function c(l,n){return t(),o("div",s,n[0]||(n[0]=[a("h1",null,"培训计划",-1),a("p",null,"此页面正在开发中...",-1)]))}const d=e(r,[["render",c],["__scopeId","data-v-5af465a9"]]);export{d as default};
