@@ -105,6 +105,7 @@ import {
   Position,
   Microphone,
 } from "@element-plus/icons-vue";
+import { messageStore } from "../store/messageStore";
 
 const currentStep = ref(0);
 const userInput = ref("");
@@ -229,6 +230,25 @@ watch(currentStep, (newStep) => {
   }
 });
 
+// 监听消息存储中的未完成功能消息
+watch(
+  () => messageStore.pendingFeatureMessage,
+  (newMessage) => {
+    if (newMessage) {
+      // 有新消息时，通过AI机器人显示
+      showPendingFeatureMessage(newMessage);
+      // 清除消息
+      messageStore.clearPendingFeatureMessage();
+
+      // 检查是否需要设置步骤
+      const step = messageStore.getAndClearStep();
+      if (step >= 0) {
+        currentStep.value = step;
+      }
+    }
+  }
+);
+
 // 设置当前步骤
 const setStep = (step) => {
   if (step >= 0 && step <= 3) {
@@ -327,6 +347,23 @@ const handleActionClick = (action) => {
     case "upload":
       responseText = "我要上传文件";
       break;
+    case "acknowledge":
+      responseText = "我知道了";
+      // 不需要AI回复
+      addUserMessage(responseText);
+      return;
+    case "help":
+      responseText = "我需要更多帮助";
+      // 添加用户消息
+      addUserMessage(responseText);
+      // AI回复帮助信息
+      setTimeout(() => {
+        showBotMessage({
+          text: "您可以通过点击顶部的步骤按钮来切换不同的课程管理环节。如果您有任何问题，请随时告诉我，我将竭诚为您服务。",
+          actions: [{ text: "谢谢", value: "thanks" }],
+        });
+      }, 1000);
+      return;
     // 可以添加更多的处理逻辑
     default:
       responseText = `我选择了: ${action.text}`;
@@ -361,6 +398,43 @@ const scrollToBottom = () => {
       chatMessagesRef.value.scrollTop = chatMessagesRef.value.scrollHeight;
     }
   });
+};
+
+// 显示未完成功能的消息
+const showPendingFeatureMessage = (message) => {
+  // 添加一个"正在输入"的消息
+  const typingMessage = {
+    type: "bot",
+    isTyping: true,
+    text: "",
+    time: formatTime(),
+  };
+
+  messages.value.push(typingMessage);
+  scrollToBottom();
+  isTyping.value = true;
+
+  // 模拟打字延迟
+  setTimeout(() => {
+    // 移除"正在输入"的消息
+    messages.value.pop();
+
+    // 添加实际消息
+    const actualMessage = {
+      type: "bot",
+      isTyping: false,
+      text: message,
+      actions: [
+        { text: "我知道了", value: "acknowledge" },
+        { text: "查看更多帮助", value: "help" },
+      ],
+      time: formatTime(),
+    };
+
+    messages.value.push(actualMessage);
+    scrollToBottom();
+    isTyping.value = false;
+  }, 1500);
 };
 </script>
 

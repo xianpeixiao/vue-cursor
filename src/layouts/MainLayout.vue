@@ -206,7 +206,7 @@ import {
   TrendCharts,
   Files,
 } from "@element-plus/icons-vue";
-import { ElMessage } from "element-plus";
+import { messageStore } from "../store/messageStore";
 
 const router = useRouter();
 const currentMainMenu = ref("workspace");
@@ -280,11 +280,69 @@ const handleWorkspaceMenuSelect = (index) => {
     case "course":
       router.push("/course-management");
       break;
+    case "course-upload":
+      // 重定向到课程管理并设置步骤为0
+      router.push("/course-management");
+      messageStore.setPendingFeatureMessage(
+        "您点击了「上传课程」功能。请在此处完成课程上传操作。"
+      );
+      // 设置一个延时，等待路由完成后设置步骤
+      setTimeout(() => {
+        messageStore.setStep(0);
+      }, 300);
+      break;
+    case "course-edit":
+      // 重定向到课程管理并设置步骤为1
+      router.push("/course-management");
+      messageStore.setPendingFeatureMessage(
+        "您点击了「编辑课程」功能。请在此处编辑您的课程内容。"
+      );
+      // 设置一个延时，等待路由完成后设置步骤
+      setTimeout(() => {
+        messageStore.setStep(1);
+      }, 300);
+      break;
+    case "course-list":
+      // 重定向到课程管理并设置步骤为3
+      router.push("/course-management");
+      messageStore.setPendingFeatureMessage(
+        "您点击了「课程列表」功能。您可以在此查看和管理所有课程。"
+      );
+      // 设置一个延时，等待路由完成后设置步骤
+      setTimeout(() => {
+        messageStore.setStep(3);
+      }, 300);
+      break;
     default:
-      // 对于未实现的路由，显示提示信息
-      ElMessage.info("该功能正在开发中");
+      // 对于未实现的路由，不再显示弹窗提示，而是通过消息存储传递信息
+      router.push("/course-management");
+      messageStore.setPendingFeatureMessage(
+        `您点击的「${getMenuName(
+          index
+        )}」功能尚未开发完成。系统将在后续版本中推出此功能，请耐心等待。`
+      );
       break;
   }
+};
+
+// 根据菜单索引获取菜单名称
+const getMenuName = (index) => {
+  const menuMap = {
+    "learning-query": "查询记录",
+    "learning-export": "导出记录",
+    "statistics-report": "学习数据报表",
+    "maintenance-logs": "系统日志",
+    "maintenance-backup": "数据备份",
+    "training-create": "制定计划",
+    "training-publish": "发布计划",
+    "training-track": "跟踪计划",
+    "lecturer-info": "内训师信息",
+    "lecturer-schedule": "课程安排",
+    "analysis-effect": "培训效果分析",
+    "analysis-behavior": "学习行为分析",
+  };
+
+  return menuMap[index] || index;
 };
 </script>
 
