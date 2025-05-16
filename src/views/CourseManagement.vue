@@ -1,175 +1,88 @@
 <template>
   <div class="course-management">
     <el-steps :active="currentStep" finish-status="success" class="steps">
-      <el-step title="上传课程" />
-      <el-step title="编辑课程" />
-      <el-step title="发布课程" />
-      <el-step title="课程列表" />
+      <el-step title="上传课程" @click.native="setStep(0)" />
+      <el-step title="编辑课程" @click.native="setStep(1)" />
+      <el-step title="发布课程" @click.native="setStep(2)" />
+      <el-step title="课程列表" @click.native="setStep(3)" />
     </el-steps>
 
     <div class="step-content">
-      <!-- 上传课程 -->
-      <div v-if="currentStep === 0" class="upload-section">
-        <el-upload
-          class="upload-area"
-          drag
-          action="#"
-          :auto-upload="false"
-          :on-change="handleFileChange"
-        >
-          <el-icon class="el-icon--upload"><upload-filled /></el-icon>
-          <div class="el-upload__text">拖拽文件到此处或 <em>点击上传</em></div>
-          <template #tip>
-            <div class="el-upload__tip">支持上传PPT、PDF、Word等格式文件</div>
-          </template>
-        </el-upload>
-
-        <div class="course-info">
-          <el-form :model="courseForm" label-width="100px">
-            <el-form-item label="课程名称">
-              <el-input
-                v-model="courseForm.name"
-                placeholder="请输入课程名称"
-              />
-            </el-form-item>
-            <el-form-item label="课程分类">
-              <el-select
-                v-model="courseForm.category"
-                placeholder="请选择课程分类"
-              >
-                <el-option label="技术培训" value="tech" />
-                <el-option label="管理培训" value="management" />
-                <el-option label="通用技能" value="general" />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="课程简介">
-              <el-input
-                v-model="courseForm.description"
-                type="textarea"
-                rows="4"
-                placeholder="请输入课程简介"
-              />
-            </el-form-item>
-          </el-form>
-        </div>
-      </div>
-
-      <!-- 编辑课程 -->
-      <div v-if="currentStep === 1" class="edit-section">
-        <el-tabs v-model="editTab" class="edit-tabs">
-          <el-tab-pane label="课程内容" name="content">
-            <div class="content-editor">
-              <el-input
-                v-model="courseForm.content"
-                type="textarea"
-                rows="15"
-                placeholder="请输入课程内容"
+      <!-- 聊天界面 -->
+      <div class="chat-container">
+        <div class="chat-messages" ref="chatMessagesRef">
+          <div
+            v-for="(message, index) in messages"
+            :key="index"
+            :class="[
+              'message',
+              message.type === 'bot' ? 'bot-message' : 'user-message',
+            ]"
+            :style="{ animationDelay: `${index * 0.1}s` }"
+          >
+            <div class="message-avatar">
+              <el-avatar
+                :icon="message.type === 'bot' ? 'ChatDotRound' : 'User'"
+                :size="40"
+                :color="message.type === 'bot' ? '#409EFF' : '#909399'"
+                class="pulsing-avatar"
               />
             </div>
-          </el-tab-pane>
-          <el-tab-pane label="课程资料" name="materials">
-            <el-upload
-              class="material-upload"
-              action="#"
-              :auto-upload="false"
-              :on-change="handleMaterialChange"
-              multiple
-            >
-              <el-button type="primary">添加课程资料</el-button>
-              <template #tip>
-                <div class="el-upload__tip">可上传补充资料、练习题等</div>
-              </template>
-            </el-upload>
-          </el-tab-pane>
-        </el-tabs>
-      </div>
+            <div class="message-content">
+              <div class="message-text">
+                <template v-if="message.isTyping">
+                  <span class="typing-indicator">
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                  </span>
+                </template>
+                <template v-else>
+                  {{ message.text }}
+                  <div
+                    v-if="message.actions && message.actions.length"
+                    class="message-actions"
+                  >
+                    <el-button
+                      v-for="(action, actionIndex) in message.actions"
+                      :key="actionIndex"
+                      size="small"
+                      round
+                      @click="handleActionClick(action)"
+                    >
+                      {{ action.text }}
+                    </el-button>
+                  </div>
+                </template>
+              </div>
+              <div class="message-time">{{ message.time }}</div>
+            </div>
+          </div>
+        </div>
 
-      <!-- 发布课程 -->
-      <div v-if="currentStep === 2" class="publish-section">
-        <el-form :model="publishForm" label-width="100px">
-          <el-form-item label="发布时间">
-            <el-date-picker
-              v-model="publishForm.publishDate"
-              type="datetime"
-              placeholder="选择发布时间"
-            />
-          </el-form-item>
-          <el-form-item label="学习时长">
-            <el-input-number
-              v-model="publishForm.duration"
-              :min="1"
-              :max="100"
-            />
-            小时
-          </el-form-item>
-          <el-form-item label="目标学员">
-            <el-select
-              v-model="publishForm.targetUsers"
-              multiple
-              placeholder="选择目标学员"
-            >
-              <el-option label="新员工" value="new" />
-              <el-option label="初级员工" value="junior" />
-              <el-option label="中级员工" value="intermediate" />
-              <el-option label="高级员工" value="senior" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="课程标签">
-            <el-tag
-              v-for="tag in publishForm.tags"
-              :key="tag"
-              closable
-              @close="handleClose(tag)"
-            >
-              {{ tag }}
-            </el-tag>
-            <el-input
-              v-if="inputVisible"
-              ref="InputRef"
-              v-model="inputValue"
-              class="input-new-tag"
-              @keyup.enter="handleInputConfirm"
-              @blur="handleInputConfirm"
-            />
-            <el-button v-else class="button-new-tag" @click="showInput">
-              + 新标签
-            </el-button>
-          </el-form-item>
-        </el-form>
-      </div>
-
-      <!-- 课程列表 -->
-      <div v-if="currentStep === 3" class="list-section">
-        <el-table :data="courseList" style="width: 100%">
-          <el-table-column prop="name" label="课程名称" />
-          <el-table-column prop="category" label="分类">
-            <template #default="scope">
-              <el-tag>{{ scope.row.category }}</el-tag>
+        <div class="chat-input">
+          <el-input
+            v-model="userInput"
+            placeholder="请输入消息..."
+            @keyup.enter="sendMessage"
+            :disabled="isTyping"
+          >
+            <template #prepend>
+              <el-button circle type="primary" class="voice-btn">
+                <el-icon><Microphone /></el-icon>
+              </el-button>
             </template>
-          </el-table-column>
-          <el-table-column prop="publishDate" label="发布时间" />
-          <el-table-column prop="status" label="状态">
-            <template #default="scope">
-              <el-tag
-                :type="scope.row.status === 'published' ? 'success' : 'info'"
+            <template #append>
+              <el-button
+                @click="sendMessage"
+                :disabled="isTyping"
+                class="send-btn"
               >
-                {{ scope.row.status === "published" ? "已发布" : "草稿" }}
-              </el-tag>
+                <el-icon><Position /></el-icon>
+              </el-button>
             </template>
-          </el-table-column>
-          <el-table-column label="操作">
-            <template #default="{ row }">
-              <el-button-group>
-                <el-button type="primary" link @click="editCourse(row)"
-                  >编辑</el-button
-                >
-                <el-button type="danger" link @click="deleteCourse(row)"
-                  >删除</el-button
-                >
-              </el-button-group>
-            </template>
-          </el-table-column>
-        </el-table>
+          </el-input>
+        </div>
       </div>
 
       <!-- 步骤控制按钮 -->
@@ -184,44 +97,144 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
-import { UploadFilled } from "@element-plus/icons-vue";
+import { ref, watch, onMounted, nextTick } from "vue";
+import {
+  UploadFilled,
+  ChatDotRound,
+  User,
+  Position,
+  Microphone,
+} from "@element-plus/icons-vue";
 
 const currentStep = ref(0);
-const editTab = ref("content");
-const inputVisible = ref(false);
-const inputValue = ref("");
-const InputRef = ref();
+const userInput = ref("");
+const messages = ref([]);
+const chatMessagesRef = ref(null);
+const isTyping = ref(false);
 
-const courseForm = ref({
-  name: "",
-  category: "",
-  description: "",
-  content: "",
-  materials: [],
+// 步骤对应的引导消息
+const stepGuides = {
+  0: [
+    {
+      text: "欢迎来到课程上传环节！我是您的AI助手，您可以告诉我课程的名称是什么？",
+      actions: [
+        { text: "如何上传文件?", value: "howToUpload" },
+        { text: "查看支持的文件格式", value: "fileFormats" },
+      ],
+    },
+    {
+      text: "接下来，请选择课程的分类，我们支持技术培训、管理培训或通用技能等多种分类，您的课程属于哪一类呢？",
+      actions: [
+        { text: "技术培训", value: "tech" },
+        { text: "管理培训", value: "management" },
+        { text: "通用技能", value: "general" },
+      ],
+    },
+    {
+      text: "请为这门课程添加一个简短的描述，这将帮助学员了解课程的主要内容和学习目标。",
+    },
+    {
+      text: "非常好！现在，您可以上传课程文件了，支持PPT、PDF、Word等格式。您可以拖拽文件到对话框，或者点击上传按钮。",
+      actions: [
+        { text: "上传文件", value: "upload" },
+        { text: "稍后上传", value: "later" },
+      ],
+    },
+  ],
+  1: [
+    {
+      text: "进入课程编辑环节！您可以编辑课程的详细内容了。需要我帮您设置课程章节结构吗？",
+      actions: [
+        { text: "使用默认章节结构", value: "defaultStructure" },
+        { text: "自定义章节", value: "customStructure" },
+      ],
+    },
+    {
+      text: "您想如何组织这门课程的内容？可以按照主题划分章节，或者按照难度级别来组织。",
+      actions: [
+        { text: "按主题划分", value: "byTopic" },
+        { text: "按难度级别", value: "byLevel" },
+      ],
+    },
+    {
+      text: "别忘了上传一些补充资料，如练习题、案例研究或代码示例，这些资料将帮助学员更好地掌握知识点。",
+      actions: [
+        { text: "上传练习题", value: "uploadExercises" },
+        { text: "上传案例研究", value: "uploadCases" },
+        { text: "上传代码示例", value: "uploadCode" },
+      ],
+    },
+  ],
+  2: [
+    {
+      text: "准备发布您的课程了！您希望什么时候发布这门课程？可以选择立即发布或设置一个未来的发布时间。",
+      actions: [
+        { text: "立即发布", value: "publishNow" },
+        { text: "定时发布", value: "scheduledPublish" },
+      ],
+    },
+    {
+      text: "这门课程大约需要多长时间完成？请估算学习时长，这将帮助学员合理安排学习计划。",
+      actions: [
+        { text: "1-5小时", value: "1-5" },
+        { text: "5-10小时", value: "5-10" },
+        { text: "10+小时", value: "10+" },
+      ],
+    },
+    {
+      text: "您期望哪些人来学习这门课程？请选择目标学员群体，这将帮助我们向合适的用户推荐您的课程。",
+      actions: [
+        { text: "新员工", value: "new" },
+        { text: "技术人员", value: "tech" },
+        { text: "管理人员", value: "management" },
+        { text: "所有人员", value: "all" },
+      ],
+    },
+    {
+      text: "最后，为课程添加一些标签，这将提高课程的可搜索性，帮助学员更容易找到您的课程。常用的标签有：入门、进阶、实战等。",
+      actions: [{ text: "添加标签", value: "addTags" }],
+    },
+  ],
+  3: [
+    {
+      text: "这里展示了您的所有课程，包括已发布和草稿状态的课程。您可以查看每门课程的基本信息和状态。",
+      actions: [
+        { text: "查看已发布课程", value: "viewPublished" },
+        { text: "查看草稿课程", value: "viewDrafts" },
+      ],
+    },
+    {
+      text: "需要编辑或删除某门课程吗？点击相应的课程后面的操作按钮即可进行相应操作。您也可以复制现有课程创建新版本。",
+      actions: [
+        { text: "如何复制课程?", value: "howToCopy" },
+        { text: "如何查看课程数据?", value: "viewStats" },
+      ],
+    },
+    {
+      text: '您可以随时返回前面的步骤创建新的课程。点击上方的"上传课程"按钮即可开始创建新课程。',
+      actions: [{ text: "创建新课程", value: "createNew" }],
+    },
+  ],
+};
+
+// 初始化消息
+onMounted(() => {
+  showBotMessage(stepGuides[0][0]);
 });
 
-const publishForm = ref({
-  publishDate: "",
-  duration: 1,
-  targetUsers: [],
-  tags: [],
+// 监听步骤变化，显示对应的引导消息
+watch(currentStep, (newStep) => {
+  if (stepGuides[newStep] && stepGuides[newStep].length > 0) {
+    showBotMessage(stepGuides[newStep][0]);
+  }
 });
 
-const courseList = ref([
-  {
-    name: "示例课程1",
-    category: "技术培训",
-    publishDate: "2024-03-20",
-    status: "published",
-  },
-  {
-    name: "示例课程2",
-    category: "管理培训",
-    publishDate: "2024-03-19",
-    status: "draft",
-  },
-]);
+// 设置当前步骤
+const setStep = (step) => {
+  if (step >= 0 && step <= 3) {
+    currentStep.value = step;
+  }
+};
 
 const nextStep = () => {
   if (currentStep.value < 3) {
@@ -235,41 +248,119 @@ const prevStep = () => {
   }
 };
 
-const handleFileChange = (file) => {
-  console.log("Selected file:", file);
+const showBotMessage = (messageObj) => {
+  // 添加一个"正在输入"的消息
+  const typingMessage = {
+    type: "bot",
+    isTyping: true,
+    text: "",
+    time: formatTime(),
+  };
+
+  messages.value.push(typingMessage);
+  scrollToBottom();
+  isTyping.value = true;
+
+  // 模拟打字延迟
+  setTimeout(() => {
+    // 移除"正在输入"的消息
+    messages.value.pop();
+
+    // 添加实际消息
+    const actualMessage = {
+      type: "bot",
+      isTyping: false,
+      text: messageObj.text,
+      actions: messageObj.actions,
+      time: formatTime(),
+    };
+
+    messages.value.push(actualMessage);
+    scrollToBottom();
+    isTyping.value = false;
+  }, 1500);
 };
 
-const handleMaterialChange = (file) => {
-  console.log("Added material:", file);
-};
-
-const handleClose = (tag) => {
-  publishForm.value.tags = publishForm.value.tags.filter((t) => t !== tag);
-};
-
-const showInput = () => {
-  inputVisible.value = true;
-  nextTick(() => {
-    InputRef.value.focus();
+const addUserMessage = (text) => {
+  messages.value.push({
+    type: "user",
+    text: text,
+    time: formatTime(),
   });
+  scrollToBottom();
 };
 
-const handleInputConfirm = () => {
-  if (inputValue.value) {
-    publishForm.value.tags.push(inputValue.value);
+const sendMessage = () => {
+  if (!userInput.value.trim() || isTyping.value) return;
+
+  addUserMessage(userInput.value);
+
+  // 模拟AI回复
+  isTyping.value = true;
+  setTimeout(() => {
+    const step = currentStep.value;
+    const guideIndex = Math.min(
+      messages.value.filter((m) => m.type === "user").length %
+        stepGuides[step].length,
+      stepGuides[step].length - 1
+    );
+    showBotMessage(stepGuides[step][guideIndex]);
+  }, 1000);
+
+  userInput.value = "";
+};
+
+const handleActionClick = (action) => {
+  // 处理消息中的按钮点击
+  console.log("Action clicked:", action);
+
+  // 模拟用户点击后的操作，这里仅作示例
+  let responseText = "";
+
+  switch (action.value) {
+    case "howToUpload":
+      responseText = "如何上传文件";
+      break;
+    case "fileFormats":
+      responseText = "查看支持的文件格式";
+      break;
+    case "upload":
+      responseText = "我要上传文件";
+      break;
+    // 可以添加更多的处理逻辑
+    default:
+      responseText = `我选择了: ${action.text}`;
   }
-  inputVisible.value = false;
-  inputValue.value = "";
+
+  // 添加用户消息
+  addUserMessage(responseText);
+
+  // 模拟AI回复
+  isTyping.value = true;
+  setTimeout(() => {
+    const step = currentStep.value;
+    // 这里可以基于不同的action返回不同的回复
+    const nextIndex =
+      messages.value.filter((m) => m.type === "user").length %
+      stepGuides[step].length;
+    showBotMessage(stepGuides[step][nextIndex]);
+  }, 1000);
 };
 
-const editCourse = (course) => {
-  console.log("Edit course:", course);
-  // TODO: 实现编辑课程功能
+const formatTime = () => {
+  const now = new Date();
+  return `${now.getHours().toString().padStart(2, "0")}:${now
+    .getMinutes()
+    .toString()
+    .padStart(2, "0")}`;
 };
 
-const deleteCourse = (course) => {
-  console.log("Delete course:", course);
-  // TODO: 实现删除课程功能
+const scrollToBottom = () => {
+  nextTick(() => {
+    if (chatMessagesRef.value) {
+      chatMessagesRef.value.scrollTop = chatMessagesRef.value.scrollHeight;
+    }
+  });
 };
 </script>
 
@@ -300,10 +391,17 @@ const deleteCourse = (course) => {
   .steps {
     margin-bottom: 24px;
     padding: 20px 0;
+    cursor: pointer;
 
     :deep(.el-step__title) {
       font-size: 1em;
       line-height: 1.4;
+      transition: color 0.3s, transform 0.3s;
+
+      &:hover {
+        transform: translateY(-2px);
+        color: var(--primary-color);
+      }
     }
 
     :deep(.el-step__description) {
@@ -326,189 +424,215 @@ const deleteCourse = (course) => {
     position: relative;
     background-color: #fff;
     overflow: auto;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.3s ease;
 
     &:hover {
       box-shadow: 0 8px 24px 0 rgba(0, 0, 0, 0.05);
     }
   }
 
-  .upload-section {
-    display: grid;
-    grid-template-columns: 45% 55%;
-    gap: clamp(16px, 4vw, 30px);
-    animation: fadeIn 0.5s ease-out;
+  .chat-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 400px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    overflow: hidden;
+    background-image: radial-gradient(
+        circle at 10% 20%,
+        rgba(0, 123, 255, 0.03) 0%,
+        transparent 20%
+      ),
+      radial-gradient(
+        circle at 90% 80%,
+        rgba(0, 200, 83, 0.03) 0%,
+        transparent 20%
+      );
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.03);
+    transition: all 0.3s ease;
+  }
 
-    @media screen and (max-width: 1200px) {
-      grid-template-columns: 1fr;
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    scroll-behavior: smooth;
+  }
+
+  .message {
+    display: flex;
+    margin-bottom: 16px;
+    max-width: 80%;
+    animation: fadeInUp 0.5s ease forwards;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.3s ease;
+
+    &:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.03);
     }
+  }
 
-    .upload-area {
-      height: clamp(200px, 40vh, 300px);
-      padding: clamp(12px, 3vw, 20px);
+  .bot-message {
+    align-self: flex-start;
+  }
 
-      .el-icon--upload {
-        font-size: clamp(32px, 6vw, 48px);
-      }
+  .user-message {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+  }
 
-      .el-upload__text {
-        font-size: 1em;
-        margin-top: 1em;
-      }
+  .message-avatar {
+    margin: 0 12px;
 
-      .el-upload__tip {
-        font-size: 0.9em;
-      }
-    }
+    .pulsing-avatar {
+      transition: all 0.3s ease;
+      animation: pulse 2s infinite;
+      box-shadow: 0 0 0 rgba(64, 158, 255, 0.4);
 
-    .course-info {
-      padding: clamp(16px, 4vw, 24px);
-
-      :deep(.el-form-item__label) {
-        font-size: 1em;
-        line-height: 1.4;
-      }
-
-      :deep(.el-input__wrapper),
-      :deep(.el-textarea__wrapper) {
-        font-size: 1em;
+      &:hover {
+        animation: none;
+        transform: scale(1.1);
       }
     }
   }
 
-  .edit-section {
-    animation: slideIn 0.5s ease-out;
+  .message-content {
+    padding: 12px 16px;
+    border-radius: 10px;
+    position: relative;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 
-    .edit-tabs {
-      height: 100%;
+    &:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+  }
 
-      :deep(.el-tabs__nav-wrap) {
-        padding: 0 20px;
+  .bot-message .message-content {
+    background-color: #e6f7ff;
+    border-top-left-radius: 0;
+
+    &::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -10px;
+      width: 0;
+      height: 0;
+      border-top: 10px solid #e6f7ff;
+      border-left: 10px solid transparent;
+    }
+  }
+
+  .user-message .message-content {
+    background-color: #d8f5d8;
+    border-top-right-radius: 0;
+    text-align: right;
+
+    &::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      right: -10px;
+      width: 0;
+      height: 0;
+      border-top: 10px solid #d8f5d8;
+      border-right: 10px solid transparent;
+    }
+  }
+
+  .message-text {
+    font-size: 1em;
+    line-height: 1.5;
+    word-break: break-word;
+  }
+
+  .message-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+
+    .el-button {
+      transition: all 0.3s ease;
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+    }
+  }
+
+  .message-time {
+    font-size: 0.7em;
+    color: #999;
+    margin-top: 4px;
+  }
+
+  .typing-indicator {
+    display: inline-flex;
+    align-items: center;
+
+    .dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #5c5c5c;
+      margin: 0 2px;
+      animation: typingAnimation 1.2s infinite ease-in-out;
+
+      &:nth-child(1) {
+        animation-delay: 0s;
       }
 
-      :deep(.el-tabs__item) {
-        transition: all 0.3s;
-        font-size: 1em;
-        padding: 0 clamp(12px, 3vw, 20px);
+      &:nth-child(2) {
+        animation-delay: 0.2s;
+      }
 
-        &:hover {
+      &:nth-child(3) {
+        animation-delay: 0.4s;
+      }
+    }
+  }
+
+  .chat-input {
+    padding: 16px;
+    background-color: #fff;
+    border-top: 1px solid #ebeef5;
+    transition: all 0.3s ease;
+
+    .el-input {
+      .el-input__wrapper {
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+
+        &:focus-within {
           transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         }
       }
     }
 
-    .content-editor {
-      margin-top: clamp(16px, 4vw, 24px);
-      transition: all 0.3s;
+    .voice-btn,
+    .send-btn {
+      transition: all 0.3s ease;
 
       &:hover {
-        transform: translateY(-2px);
+        transform: scale(1.1);
       }
 
-      :deep(.el-textarea__wrapper) {
-        font-size: 1em;
-      }
-    }
-
-    .material-upload {
-      margin-top: clamp(16px, 4vw, 24px);
-      padding: clamp(16px, 4vw, 24px);
-      border: 1px dashed #dcdfe6;
-      border-radius: 8px;
-      transition: all 0.3s;
-
-      &:hover {
-        border-color: var(--primary-color);
-        transform: translateY(-2px);
-      }
-    }
-  }
-
-  .publish-section {
-    max-width: min(1000px, 90%);
-    margin: 0 auto;
-    padding: clamp(20px, 5vw, 30px);
-    animation: slideUp 0.5s ease-out;
-
-    :deep(.el-form-item) {
-      margin-bottom: clamp(16px, 4vw, 24px);
-    }
-
-    :deep(.el-form-item__label) {
-      font-size: 1em;
-      line-height: 1.4;
-    }
-
-    :deep(.el-input__wrapper),
-    :deep(.el-select),
-    :deep(.el-date-editor) {
-      font-size: 1em;
-      width: 100%;
-    }
-
-    .el-tag {
-      margin: clamp(4px, 1vw, 8px);
-      font-size: 0.9em;
-    }
-
-    .input-new-tag {
-      width: clamp(80px, 20vw, 120px);
-      margin: clamp(4px, 1vw, 8px);
-    }
-  }
-
-  .list-section {
-    margin-top: clamp(16px, 4vw, 24px);
-    animation: fadeIn 0.5s ease-out;
-    overflow-x: auto;
-
-    .el-table {
-      min-width: 800px;
-      border-radius: 8px;
-      overflow: hidden;
-      transition: all 0.3s;
-
-      &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.05);
-      }
-
-      th {
-        font-size: 1em;
-        padding: clamp(8px, 2vw, 12px);
-        background-color: #f5f7fa;
-      }
-
-      td {
-        padding: clamp(8px, 2vw, 12px);
-      }
-    }
-
-    :deep(.el-table__header-wrapper) {
-      .el-table__cell {
-        &:nth-child(1) {
-          min-width: 200px;
-        }
-        &:nth-child(2) {
-          min-width: 120px;
-        }
-        &:nth-child(3) {
-          min-width: 160px;
-        }
-        &:nth-child(4) {
-          min-width: 100px;
-        }
-        &:nth-child(5) {
-          min-width: 120px;
-        }
-      }
-    }
-
-    @media screen and (max-width: 768px) {
-      :deep(.el-table) {
-        .el-button {
-          padding: 8px;
-          min-height: 32px;
-        }
+      &:active {
+        transform: scale(0.95);
       }
     }
   }
@@ -524,48 +648,60 @@ const deleteCourse = (course) => {
       min-width: clamp(100px, 25vw, 120px);
       font-size: 1em;
       height: clamp(36px, 8vh, 40px);
+      transition: all 0.3s ease;
+
+      &:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+
+      &:active {
+        transform: translateY(-1px);
+      }
     }
   }
 
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  }
-
-  @keyframes slideIn {
-    from {
-      opacity: 0;
-      transform: translateX(-20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateX(0);
-    }
-  }
-
-  @keyframes slideUp {
-    from {
+  @keyframes fadeInUp {
+    0% {
       opacity: 0;
       transform: translateY(20px);
     }
-    to {
+    100% {
       opacity: 1;
       transform: translateY(0);
     }
   }
 
-  @media screen and (max-width: 1440px) {
-    .upload-section {
-      grid-template-columns: 1fr;
-      gap: 20px;
+  @keyframes typingAnimation {
+    from {
+      transform: translateY(0);
     }
+    30% {
+      transform: translateY(-6px);
+    }
+    60% {
+      transform: translateY(0);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
 
-    .publish-section {
-      max-width: 800px;
+  @keyframes pulse {
+    0% {
+      box-shadow: 0 0 0 0 rgba(64, 158, 255, 0.4);
+    }
+    70% {
+      box-shadow: 0 0 0 10px rgba(64, 158, 255, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(64, 158, 255, 0);
+    }
+  }
+
+  @media screen and (max-width: 768px) {
+    .message {
+      max-width: 90%;
     }
   }
 }
